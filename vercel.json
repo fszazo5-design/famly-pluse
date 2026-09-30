@@ -1,0 +1,93 @@
+{
+  "rewrites": [
+    {
+      "source": "/149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js",
+      "destination": "https://api.vercel.com/bot-protection/v1/challenge"
+    },
+    {
+      "source": "/149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/:path*",
+      "destination": "https://api.vercel.com/bot-protection/v1/proxy/:path*"
+    },
+    {
+      "source": "/api/auth/request-otp",
+      "destination": "/api/auth?__api_handler=request-otp"
+    },
+    {
+      "source": "/api/auth/verify-otp",
+      "destination": "/api/auth?__api_handler=verify-otp"
+    },
+    {
+      "source": "/api/family/complete",
+      "destination": "/api/family?__api_handler=complete"
+    },
+    {
+      "source": "/api/family/group",
+      "destination": "/api/family?__api_handler=group"
+    },
+    {
+      "source": "/api/family/members",
+      "destination": "/api/family?__api_handler=members"
+    },
+    {
+      "source": "/api/sos/active",
+      "destination": "/api/sos?__api_handler=active"
+    },
+    {
+      "source": "/api/sos/resolve",
+      "destination": "/api/sos?__api_handler=resolve"
+    },
+    {
+      "source": "/api/sos/trigger",
+      "destination": "/api/sos?__api_handler=trigger"
+    },
+    {
+      "source": "/api/tracking/breadcrumb",
+      "destination": "/api/tracking?__api_handler=breadcrumb"
+    },
+    {
+      "source": "/api/tracking/sessions",
+      "destination": "/api/tracking?__api_handler=sessions"
+    },
+    {
+      "source": "/api/tracking/start",
+      "destination": "/api/tracking?__api_handler=start"
+    },
+    {
+      "source": "/api/tracking/stop",
+      "destination": "/api/tracking?__api_handler=stop"
+    },
+    {
+      "source": "/api/check-in/active",
+      "destination": "/api/check-in?__api_handler=active"
+    },
+    {
+      "source": "/api/check-in/confirm",
+      "destination": "/api/check-in?__api_handler=confirm"
+    },
+    {
+      "source": "/api/check-in/create",
+      "destination": "/api/check-in?__api_handler=create"
+    },
+    {
+      "source": "/api/audio-vault/log",
+      "destination": "/api/audio-vault?__api_handler=log"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/:path*",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+      ]
+    },
+    {
+      "source": "/turnstile-widget.html",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://localhost capacitor://localhost;"
+        }
+      ]
+    }
+  ]
+}

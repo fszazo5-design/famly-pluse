@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>التحقق الأمني</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+      body { margin: 0; min-height: 72px; display: grid; place-items: center; background: transparent; }
+      #widget { min-height: 65px; }
+      #status { color: #fca5a5; font-size: 12px; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <div>
+      <div id="widget"></div>
+      <p id="status" role="status"></p>
+    </div>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const siteKey = params.get('sitekey') || '';
+        const parentOrigin = params.get('parentOrigin') || '';
+        const status = document.getElementById('status');
+        const allowedParents = new Set(['https://localhost', 'capacitor://localhost']);
+
+        function notify(type, token) {
+          if (!allowedParents.has(parentOrigin)) return;
+          window.parent.postMessage(
+            { source: 'famlypulse-turnstile-widget', type, token },
+            parentOrigin,
+          );
+        }
+
+        if (!siteKey || !allowedParents.has(parentOrigin)) {
+          status.textContent = 'تعذر تهيئة اختبار الأمان.';
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          if (!window.turnstile) {
+            status.textContent = 'تعذر تحميل اختبار الأمان.';
+            notify('error');
+            return;
+          }
+
+          window.turnstile.render('#widget', {
+            sitekey: siteKey,
+            action: 'request_otp',
+            theme: 'dark',
+            language: 'ar',
+            callback: (token) => notify('token', token),
+            'expired-callback': () => notify('expired'),
+            'error-callback': () => {
+              status.textContent = 'تعذر إكمال اختبار الأمان.';
+              notify('error');
+            },
+          });
+        };
+        script.onerror = () => {
+          status.textContent = 'تعذر الاتصال بخدمة التحقق.';
+          notify('error');
+        };
+        document.head.appendChild(script);
+      })();
+    </script>
+  </body>
+</html>
