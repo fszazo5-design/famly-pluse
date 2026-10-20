@@ -1,9 +1,9 @@
 /*
- * API client for the Vercel-hosted backend that connects to Neon Postgres.
- * Set VITE_API_URL for native builds; same-origin is used by the web app.
+ * API client for the Cloudflare Worker backend. VITE_API_URL can override
+ * the production origin for preview or staging builds.
  */
 
-const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '');
+const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) ?? 'https://famly-pluse-api.fszazo5.workers.dev').replace(/\/$/, '');
 
 function authHeaders(token?: string): Record<string, string> {
   const storedToken = token ?? (() => {

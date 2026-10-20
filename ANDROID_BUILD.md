@@ -11,33 +11,32 @@
 
 أضف هذه القيم إلى **Settings → Secrets and variables → Actions** في مستودع GitHub:
 
-- `VITE_API_URL=https://famlypulse.vercel.app` — رابط API المنشور على Vercel.
-- `VITE_TURNSTILE_SITE_KEY` — Site Key عام من Cloudflare، يُضمّن في تطبيق الهاتف؛ ليس سرًا.
+- `VITE_API_URL=https://famly-pluse-api.fszazo5.workers.dev` — عنوان API الخاص بـ Cloudflare Worker (يمكن تركه فارغًا لاستخدام العنوان الافتراضي المضمّن بالتطبيق).
+- `VITE_TURNSTILE_SITE_KEY` — Site Key عام من Cloudflare، يُضمّن في الويب والهاتف؛ ليس سرًا.
 - `VITE_HELP_VIDEO_URL` — اختياري.
 - أسرار توقيع APK/AAB الموجودة في workflow.
 
-ينشئ التطبيق صفحة Turnstile صغيرة مستضافة على نطاق Vercel نفسه، ثم يضمّنها داخل WebView. لذلك أضف `famlypulse.vercel.app` إلى Hostname Management في Widget Turnstile. لا تضف `localhost`؛ صفحة الاختبار نفسها مستضافة على Vercel.
+يستضيف Worker صفحة `/turnstile-widget.html` ويضمّنها التطبيق داخل الويب أو WebView. أضف اسم المضيف `famly-pluse-api.fszazo5.workers.dev` إلى Hostname Management في Widget Turnstile. استخدم action باسم `request_otp`.
 
-أضف **Secret Key** المقابل في Vercel Project → **Settings → Environment Variables** باسم `TURNSTILE_SECRET_KEY` (Production، وPreview عند الحاجة). لا تضع هذا المفتاح داخل GitHub أو تطبيق Android أو أي متغير يبدأ بـ `VITE_`.
+أضف **Secret Key** المقابل إلى Cloudflare Worker باسم `TURNSTILE_SECRET_KEY` عبر `wrangler secret put` أو إعدادات Worker. لا تضع هذا المفتاح داخل GitHub أو تطبيق Android أو أي متغير يبدأ بـ `VITE_`.
 
 ## حماية الويب والهاتف
 
-- نسخة الويب تستخدم **Vercel BotID Basic** بشكل غير مرئي، بلا مفاتيح Cloudflare.
-- تطبيق Capacitor للهاتف يستخدم Cloudflare Turnstile، لأن طلباته من WebView محلي إلى Vercel عابرة للنطاق.
-- فعّل OIDC في Vercel Project → **Settings → Security → Secure backend access with OIDC federation** ليتمكن BotID من التحقق من طلبات الويب.
+- نسختا الويب والهاتف تستخدمان Cloudflare Turnstile مع تحقق server-side في Worker.
+- عند نقل OTP إلى Worker، لم يعد فحص Vercel BotID مستخدمًا لهذا المسار.
 
-## إعداد Auth0 وNeon
+## إعداد Auth0 وCloudflare Worker
 
-يستخدم المشروع **Auth0 Passwordless SMS** فقط لإرسال والتحقق من OTP. في Vercel، تأكد من وجود المتغيرات التالية على الخادم:
+يستخدم المشروع **Auth0 Passwordless SMS** فقط لإرسال والتحقق من OTP. أضف القيم التالية كـ Worker secrets/variables في Cloudflare:
 
 - `AUTH0_DOMAIN`
 - `AUTH0_CLIENT_ID`
 - `AUTH0_CLIENT_SECRET`
 - `AUTH0_REDIRECT_URI=https://famlypulse.vercel.app/`
 - `TURNSTILE_SECRET_KEY`
-- `DATABASE_URL` من تكامل Neon، أو `NEON_DATABASE_URL`
+- `TURNSTILE_SECRET_KEY` (سرّ تحقق Turnstile)
 
-لا تستخدم إعدادات Twilio القديمة؛ لم تعد جزءًا من مسار OTP.
+لا تُستخدم قاعدة Neon في Worker الحالي. البيانات التشغيلية تُكتب إلى KV. لا تستخدم إعدادات Twilio القديمة؛ لم تعد جزءًا من مسار OTP. راجع مستودع الباك إند لحدود KV المهمة قبل الاستخدام الإنتاجي في حالات الطوارئ.
 
 ## بناء APK تجريبي
 
