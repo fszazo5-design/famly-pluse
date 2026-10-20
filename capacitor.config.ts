@@ -20,6 +20,15 @@ const config: CapacitorConfig = {
       smallIcon: 'ic_shield',
       iconColor: '#dc2626',
     },
+    CapacitorUpdater: {
+      // GitHub Releases are checked explicitly by the web layer.
+      // Native/plugin changes still require a new APK/AAB release.
+      autoUpdate: 'off',
+      appReadyTimeout: 10000,
+      autoDeleteFailed: true,
+      autoDeletePrevious: true,
+      keepUrlPathAfterReload: true,
+    },
   },
   server: {
     androidScheme: 'https',

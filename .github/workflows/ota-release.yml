@@ -1,0 +1,60 @@
+name: Frontend OTA Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - 'tailwind.config.js'
+      - 'postcss.config.js'
+
+permissions:
+  contents: write
+
+jobs:
+  publish-ota:
+    name: Build and publish frontend OTA bundle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Build React frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_HELP_VIDEO_URL: ${{ secrets.VITE_HELP_VIDEO_URL }}
+          VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+          VITE_OTA_REPOSITORY: ${{ github.repository }}
+        run: npm run build
+
+      - name: Create OTA archive
+        run: |
+          cd dist
+          zip -qr ../dist.zip .
+          test -s ../dist.zip
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OTA_TAG: ota-${{ github.run_number }}
+        run: |
+          gh release create "$OTA_TAG" dist.zip \
+            --target "$GITHUB_SHA" \
+            --title "Frontend OTA $OTA_TAG" \
+            --notes "Frontend-only OTA bundle from commit $GITHUB_SHA. Native Android changes require a new APK/AAB release."

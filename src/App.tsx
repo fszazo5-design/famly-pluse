@@ -1,6 +1,7 @@
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import AuthScreen from '@/components/AuthScreen';
 import Dashboard from '@/components/Dashboard';
+import OtaUpdateNotice from '@/components/OtaUpdateNotice';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -13,7 +14,12 @@ function AppContent() {
     );
   }
 
-  return user ? <Dashboard /> : <AuthScreen />;
+  return (
+    <>
+      {user ? <Dashboard /> : <AuthScreen />}
+      <OtaUpdateNotice />
+    </>
+  );
 }
 
 export default function App() {
