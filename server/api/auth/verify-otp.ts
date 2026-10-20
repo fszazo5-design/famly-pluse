@@ -2,12 +2,9 @@ import { sql } from '../lib/neon';
 import { createSession } from '../lib/auth';
 import { getAuth0Config } from '../lib/auth0';
 import { json, handleOptions } from '../lib/http';
+import { validInternationalPhone } from '../lib/phone';
 
 export const config = { runtime: 'edge' };
-
-function validE164(phone: unknown): phone is string {
-  return typeof phone === 'string' && /^\+[1-9]\d{7,14}$/.test(phone);
-}
 
 interface Auth0TokenResponse {
   access_token?: string;
@@ -26,7 +23,7 @@ export default async function handler(req: Request) {
 
   try {
     const { phone, code, display_name } = await req.json();
-    if (!validE164(phone) || typeof code !== 'string' || !/^\d{4,10}$/.test(code)) {
+    if (!validInternationalPhone(phone) || typeof code !== 'string' || !/^\d{4,10}$/.test(code)) {
       return json({ error: 'رقم الهاتف أو رمز التحقق غير صالح.' }, 400);
     }
 

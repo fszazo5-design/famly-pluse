@@ -3,12 +3,9 @@ import { getAuth0Config, trustedClientIp } from '../lib/auth0';
 import { checkBotId } from 'botid/server';
 import { isTurnstileConfigured, verifyTurnstileToken } from '../lib/turnstile';
 import { json, handleOptions } from '../lib/http';
+import { validInternationalPhone } from '../lib/phone';
 
 export const config = { runtime: 'edge' };
-
-function validE164(phone: unknown): phone is string {
-  return typeof phone === 'string' && /^\+[1-9]\d{7,14}$/.test(phone);
-}
 
 export default async function handler(req: Request) {
   const preflight = handleOptions(req);
@@ -17,7 +14,9 @@ export default async function handler(req: Request) {
 
   try {
     const { phone, captchaToken } = await req.json();
-    if (!validE164(phone)) return json({ error: 'استخدم رقمًا دوليًا بصيغة E.164 مثل +9665XXXXXXX.' }, 400);
+    if (!validInternationalPhone(phone)) {
+      return json({ error: 'رقم الهاتف غير صحيح. استخدم رمز الدولة والرقم بصيغة دولية، مثل +9665XXXXXXX أو +2010XXXXXXX.' }, 400);
+    }
 
     const auth0 = getAuth0Config();
     if (!auth0) return json({ error: 'إعداد تسجيل الدخول عبر Auth0 غير مكتمل.' }, 503);

@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { ArrowRight, Loader2, Phone, Shield, Users, UserPlus } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { savePhoneSession } from '@/lib/localAuth';
+import { normalizePhoneInput, validateInternationalPhone } from '@/lib/phone';
 import type { Profile } from '@/lib/types';
 import TurnstileCaptcha from './TurnstileCaptcha';
 
@@ -42,13 +43,19 @@ export default function AuthScreen() {
   async function requestOtp(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    const phoneValidation = validateInternationalPhone(phone);
+    if (!phoneValidation.valid) {
+      setError(phoneValidation.error ?? 'رقم الهاتف غير صحيح.');
+      return;
+    }
+    setPhone(phoneValidation.e164);
     if (isNative && (!captchaToken || !turnstileSiteKey || !turnstileOrigin)) {
       setError('أكمل اختبار الأمان وتأكد من إعداد رابط API ومفتاح Turnstile لنسخة التطبيق.');
       return;
     }
     setLoading(true);
     try {
-      await api.requestOtp(phone.trim(), isNative ? captchaToken : undefined);
+      await api.requestOtp(phoneValidation.e164, isNative ? captchaToken : undefined);
       setStep('otp');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'تعذر إرسال الرمز.');
@@ -64,9 +71,15 @@ export default function AuthScreen() {
 
   async function verifyOtp(event: React.FormEvent) {
     event.preventDefault();
-    setError(null); setLoading(true);
+    setError(null);
+    const phoneValidation = validateInternationalPhone(phone);
+    if (!phoneValidation.valid) {
+      setError(phoneValidation.error ?? 'رقم الهاتف غير صحيح.');
+      return;
+    }
+    setLoading(true);
     try {
-      const result = await api.verifyOtp({ phone: phone.trim(), code: otp.trim(), display_name: displayName.trim() }) as AuthResponse;
+      const result = await api.verifyOtp({ phone: phoneValidation.e164, code: otp.trim(), display_name: displayName.trim() }) as AuthResponse;
       setAuth(result);
       if (result.profile?.family_id) savePhoneSession({ token: result.token, user: result.user, profile: result.profile });
       else setStep('family');
@@ -107,7 +120,7 @@ export default function AuthScreen() {
         </div>
         <div className="glass-card p-6">
           {step === 'phone' && <form onSubmit={requestOtp} className="space-y-5">
-            <div><label className="block text-sm font-medium text-slate-300 mb-2">رقم الهاتف الدولي</label><div className="relative"><Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><input required dir="ltr" type="tel" value={phone} onChange={(e) => setPhone(e.target.value.replace(/[^+\d]/g, ''))} className="input-field pr-10 font-mono" placeholder="+9665XXXXXXXX" /></div><p className="text-xs text-slate-500 mt-2">اكتب الرقم بصيغة دولية مثل +966...</p></div>
+            <div><label className="block text-sm font-medium text-slate-300 mb-2">رقم الهاتف الدولي</label><div className="relative"><Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><input required maxLength={20} autoComplete="tel" inputMode="tel" dir="ltr" type="tel" value={phone} onChange={(e) => setPhone(normalizePhoneInput(e.target.value))} className="input-field pr-10 font-mono" placeholder="+9665XXXXXXXX" /></div><p className="text-xs text-slate-500 mt-2">اكتب رمز الدولة والرقم، مثل +966 أو +20. يتم التحقق من الصيغة حسب الدولة.</p></div>
             {isNative && <TurnstileCaptcha siteKey={turnstileSiteKey} widgetOrigin={turnstileOrigin} resetKey={captchaResetKey} onTokenChange={handleCaptchaToken} />}
             <button disabled={loading || (isNative && (!captchaToken || !turnstileSiteKey || !turnstileOrigin))} className="btn-primary w-full py-3.5 flex items-center justify-center gap-2">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Phone className="w-5 h-5" /> إرسال رمز SMS</>}</button>
           </form>}
