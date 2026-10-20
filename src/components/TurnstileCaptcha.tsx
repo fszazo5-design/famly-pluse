@@ -50,7 +50,7 @@ export default function TurnstileCaptcha({ siteKey, widgetOrigin, resetKey, onTo
 
   if (!siteKey || !widgetOrigin) {
     return <p role="status" className="text-xs text-primary-300 bg-primary-950/30 border border-primary-800/50 rounded-lg px-3 py-2">
-      إعداد Turnstile أو رابط API غير موجود في نسخة التطبيق؛ لن يُرسل رمز SMS.
+      إعداد Turnstile أو رابط Worker غير موجود؛ لن يُرسل رمز SMS.
     </p>;
   }
 

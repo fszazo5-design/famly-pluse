@@ -37,7 +37,7 @@ jobs:
 
       - name: Build React frontend
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://famlypulse.vercel.app' }}
+          VITE_API_URL: https://famly-pluse-api.fszazo5.workers.dev
           VITE_HELP_VIDEO_URL: ${{ secrets.VITE_HELP_VIDEO_URL }}
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
           VITE_OTA_REPOSITORY: ${{ github.repository }}

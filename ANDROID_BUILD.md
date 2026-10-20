@@ -11,20 +11,19 @@
 
 أضف هذه القيم إلى **Settings → Secrets and variables → Actions** في مستودع GitHub:
 
-- `VITE_API_URL=https://famlypulse.vercel.app` — رابط API المنشور على Vercel.
+- `VITE_API_URL=https://famly-pluse-api.fszazo5.workers.dev` — رابط Cloudflare Worker.
 - `VITE_TURNSTILE_SITE_KEY` — Site Key عام من Cloudflare، يُضمّن في تطبيق الهاتف؛ ليس سرًا.
 - `VITE_HELP_VIDEO_URL` — اختياري.
 - أسرار توقيع APK/AAB الموجودة في workflow.
 
-ينشئ التطبيق صفحة Turnstile صغيرة مستضافة على نطاق Vercel نفسه، ثم يضمّنها داخل WebView. لذلك أضف `famlypulse.vercel.app` إلى Hostname Management في Widget Turnstile. لا تضف `localhost`؛ صفحة الاختبار نفسها مستضافة على Vercel.
+ينشئ التطبيق صفحة Turnstile صغيرة مستضافة على Worker نفسه، ثم يضمّنها داخل WebView. أضف `famly-pluse-api.fszazo5.workers.dev` إلى Hostname Management في Widget Turnstile.
 
-أضف **Secret Key** المقابل في Vercel Project → **Settings → Environment Variables** باسم `TURNSTILE_SECRET_KEY` (Production، وPreview عند الحاجة). لا تضع هذا المفتاح داخل GitHub أو تطبيق Android أو أي متغير يبدأ بـ `VITE_`.
+أضف **Secret Key** المقابل إلى Cloudflare Worker باسم `TURNSTILE_SECRET_KEY`. لا تضع هذا المفتاح داخل GitHub أو تطبيق Android أو أي متغير يبدأ بـ `VITE_`.
 
 ## حماية الويب والهاتف
 
-- نسخة الويب تستخدم **Vercel BotID Basic** بشكل غير مرئي، بلا مفاتيح Cloudflare.
-- تطبيق Capacitor للهاتف يستخدم Cloudflare Turnstile، لأن طلباته من WebView محلي إلى Vercel عابرة للنطاق.
-- فعّل OIDC في Vercel Project → **Settings → Security → Secure backend access with OIDC federation** ليتمكن BotID من التحقق من طلبات الويب.
+- الويب وتطبيق Capacitor يستخدمان Cloudflare Turnstile عبر Worker.
+- كل طلبات OTP تمر إلى Worker المنشور، ولا يعتمد التطبيق على Vercel أو BotID.
 
 ## إعداد Auth0 وNeon
 
@@ -33,7 +32,7 @@
 - `AUTH0_DOMAIN`
 - `AUTH0_CLIENT_ID`
 - `AUTH0_CLIENT_SECRET`
-- `AUTH0_REDIRECT_URI=https://famlypulse.vercel.app/`
+- `AUTH0_REDIRECT_URI=https://famly-pluse-api.fszazo5.workers.dev/`
 - `TURNSTILE_SECRET_KEY`
 - `DATABASE_URL` من تكامل Neon، أو `NEON_DATABASE_URL`
 

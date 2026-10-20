@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
 import { ArrowRight, Loader2, Phone, Shield, Users, UserPlus } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { savePhoneSession } from '@/lib/localAuth';
@@ -29,9 +28,11 @@ export default function AuthScreen() {
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
-  const isNative = Capacitor.isNativePlatform();
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() ?? '';
-  const apiUrl = import.meta.env.VITE_API_URL?.trim() || 'https://famlypulse.vercel.app';
+  const configuredApiUrl = import.meta.env.VITE_API_URL?.trim() ?? '';
+  const apiUrl = configuredApiUrl && !/vercel\.app/i.test(configuredApiUrl)
+    ? configuredApiUrl
+    : 'https://famly-pluse-api.fszazo5.workers.dev';
   let turnstileOrigin = '';
   try {
     if (apiUrl) turnstileOrigin = new URL(apiUrl).origin;
@@ -49,26 +50,24 @@ export default function AuthScreen() {
       return;
     }
     setPhone(phoneValidation.e164);
-    if (isNative && (!turnstileSiteKey || !turnstileOrigin)) {
-      setError('نسخة التطبيق غير مهيأة للتحقق الأمني. أضف VITE_TURNSTILE_SITE_KEY ثم أعد بناء APK.');
+    if (!turnstileSiteKey || !turnstileOrigin) {
+      setError('التحقق الأمني غير مهيأ. أضف VITE_TURNSTILE_SITE_KEY واضبط رابط Worker ثم أعد البناء.');
       return;
     }
-    if (isNative && !captchaToken) {
+    if (!captchaToken) {
       setError('أكمل اختبار الأمان أولًا لإرسال رمز SMS.');
       return;
     }
     setLoading(true);
     try {
-      await api.requestOtp(phoneValidation.e164, isNative ? captchaToken : undefined);
+      await api.requestOtp(phoneValidation.e164, captchaToken);
       setStep('otp');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'تعذر إرسال الرمز.');
     } finally {
-      if (isNative) {
-        // Turnstile tokens are single-use; reload the hosted widget after every attempt.
-        setCaptchaToken('');
-        setCaptchaResetKey((key) => key + 1);
-      }
+      // Turnstile tokens are single-use; reload the hosted widget after every attempt.
+      setCaptchaToken('');
+      setCaptchaResetKey((key) => key + 1);
       setLoading(false);
     }
   }
@@ -125,8 +124,8 @@ export default function AuthScreen() {
         <div className="glass-card p-6">
           {step === 'phone' && <form onSubmit={requestOtp} className="space-y-5">
             <div><label className="block text-sm font-medium text-slate-300 mb-2">رقم الهاتف الدولي</label><div className="relative"><Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><input required maxLength={20} autoComplete="tel" inputMode="tel" dir="ltr" type="tel" value={phone} onChange={(e) => setPhone(normalizePhoneInput(e.target.value))} className="input-field pr-10 font-mono" placeholder="+9665XXXXXXXX" /></div><p className="text-xs text-slate-500 mt-2">اكتب رمز الدولة والرقم، مثل +966 أو +20. يتم التحقق من الصيغة حسب الدولة.</p></div>
-            {isNative && <TurnstileCaptcha siteKey={turnstileSiteKey} widgetOrigin={turnstileOrigin} resetKey={captchaResetKey} onTokenChange={handleCaptchaToken} />}
-            <button disabled={loading || (isNative && (!captchaToken || !turnstileSiteKey || !turnstileOrigin))} className="btn-primary w-full py-3.5 flex items-center justify-center gap-2">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Phone className="w-5 h-5" /> إرسال رمز SMS</>}</button>
+            <TurnstileCaptcha siteKey={turnstileSiteKey} widgetOrigin={turnstileOrigin} resetKey={captchaResetKey} onTokenChange={handleCaptchaToken} />
+            <button disabled={loading || !captchaToken || !turnstileSiteKey || !turnstileOrigin} className="btn-primary w-full py-3.5 flex items-center justify-center gap-2">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Phone className="w-5 h-5" /> إرسال رمز SMS</>}</button>
           </form>}
           {step === 'otp' && <form onSubmit={verifyOtp} className="space-y-5">
             <button type="button" onClick={() => setStep('phone')} className="text-xs text-slate-400 hover:text-white flex items-center gap-1"><ArrowRight className="w-4 h-4" /> تغيير الرقم</button>

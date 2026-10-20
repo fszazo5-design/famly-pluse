@@ -16,7 +16,7 @@ export function getAuth0Config(): Auth0Config | null {
     const domainUrl = new URL(rawDomain.includes('://') ? rawDomain : `https://${rawDomain}`);
     if (domainUrl.protocol !== 'https:') return null;
 
-    const redirectUri = process.env.AUTH0_REDIRECT_URI?.trim() || 'https://famlypulse.vercel.app/';
+    const redirectUri = process.env.AUTH0_REDIRECT_URI?.trim() || 'https://famly-pluse-api.fszazo5.workers.dev/';
     const callbackUrl = new URL(redirectUri);
     if (callbackUrl.protocol !== 'https:' && callbackUrl.hostname !== 'localhost') return null;
 
@@ -31,7 +31,7 @@ export function getAuth0Config(): Auth0Config | null {
   }
 }
 
-/** Forward only Vercel's platform-provided single-client IP header to Auth0. */
+/** Forward a validated client IP header to Auth0 for rate limiting. */
 export function trustedClientIp(request: Request): string | null {
   const ip = request.headers.get('x-real-ip')?.trim();
   if (!ip || ip.length > 64 || !/^[0-9a-fA-F:.]+$/.test(ip)) return null;
