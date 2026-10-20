@@ -4,6 +4,7 @@ import {
   checkForOtaUpdate,
   downloadAndStageOtaUpdate,
   isOtaSupported,
+  OtaUpdateError,
   type OtaUpdateInfo,
 } from '@/lib/ota';
 
@@ -42,8 +43,12 @@ export default function OtaUpdateNotice() {
     try {
       await downloadAndStageOtaUpdate(update);
       setMessage('تم تنزيل التحديث. سيُفعّل عند إعادة فتح التطبيق.');
-    } catch {
-      setMessage('تعذر تنزيل التحديث الآن. حاول مرة أخرى لاحقًا.');
+    } catch (error: unknown) {
+      const diagnostic = error instanceof OtaUpdateError
+        ? `${error.message}\nكود الخطأ: ${error.code}\nالتفاصيل: ${error.technicalDetails}`
+        : `فشل غير متوقع في OTA: ${error instanceof Error ? error.message : String(error)}`;
+      console.error('OTA update failed', error);
+      setMessage(diagnostic);
       setInstalling(false);
     }
   }
@@ -63,7 +68,7 @@ export default function OtaUpdateNotice() {
         </div>
         <div className="flex-1">
           <p className="font-semibold text-white">يتوفر تحديث جديد للواجهة</p>
-          <p className="mt-1 text-xs text-slate-400">{message || `الإصدار ${update.version}`}</p>
+          <p className="mt-1 whitespace-pre-line text-xs text-slate-400">{message || `الإصدار ${update.version}`}</p>
           {!message && (
             <button
               onClick={installUpdate}
