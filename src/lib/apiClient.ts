@@ -81,6 +81,9 @@ export const api = {
   verifyOtp: (body: { phone: string; code: string; display_name: string }) =>
     post('/api/auth/verify-otp', body),
 
+  exchangeFirebase: (body: { id_token: string; display_name: string }) =>
+    post('/api/auth/firebase-exchange', body),
+
   completeFamily: (token: string, body: { action: 'create' | 'join'; family_name?: string; family_code?: string; display_name: string }) =>
     post('/api/family/complete', body, token),
 

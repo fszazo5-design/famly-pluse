@@ -1,4 +1,4 @@
-# Phone OTP + Family Code عبر Cloudflare Worker
+# Firebase Phone OTP + Family Code عبر Cloudflare Worker
 
 ## مسار المصادقة
 
@@ -8,43 +8,37 @@
 https://famly-pluse-api.fszazo5.workers.dev
 ```
 
-يستخدم Worker خدمة Auth0 Passwordless SMS للتحقق من رقم الهاتف، وCloudflare Turnstile للحماية من الطلبات الآلية، وCloudflare KV لتخزين المستخدمين والعائلات والجلسات.
+تستخدم الواجهة Firebase Phone Auth لإرسال SMS والتحقق من reCAPTCHA، ثم ترسل Firebase ID token إلى Worker. يتحقق Worker من الرمز عبر Firebase Identity Toolkit ويصدر جلسة Bearer محلية، بينما يستمر Cloudflare KV في تخزين المستخدمين والعائلات والجلسات.
 
 التطبيق يرسل طلبات OTP إلى:
 
-- `POST /api/auth/request-otp` مع `{ phone, captchaToken }`
-- `POST /api/auth/verify-otp` مع `{ phone, code, display_name }`
+- `POST /api/auth/firebase-exchange` مع `{ id_token, display_name }`
 - `POST /api/family/complete` مع `Authorization: Bearer <token>` لإنشاء عائلة أو الانضمام إليها
 
-## إعداد Worker
+## إعداد Firebase وWorker
 
-أضف أسرار Auth0 وTurnstile إلى مستودع الباك أو Cloudflare Worker فقط:
+فعّل Phone provider في Firebase Authentication، وأضف نطاق الواجهة إلى Authorized domains، ثم أضف Web API key إلى Worker فقط:
 
 ```sh
-npx wrangler secret put AUTH0_DOMAIN
-npx wrangler secret put AUTH0_CLIENT_ID
-npx wrangler secret put AUTH0_CLIENT_SECRET
-npx wrangler secret put AUTH0_REDIRECT_URI
-npx wrangler secret put TURNSTILE_SECRET_KEY
+npx wrangler secret put FIREBASE_WEB_API_KEY
 ```
 
 لا تضع أيًا من هذه القيم داخل متغير يبدأ بـ `VITE_` أو داخل APK.
 
-## إعداد Turnstile
+## إعداد الواجهة
 
-أنشئ Widget من Cloudflare Turnstile بنمط Managed، ثم اسمح باسم المضيف الخاص بالـ Worker:
-
-```text
-famly-pluse-api.fszazo5.workers.dev
-```
-
-ضع Site Key العام في Secret باسم:
+ضع قيم Web app الظاهرة في Firebase Console داخل `.env`:
 
 ```text
-VITE_TURNSTILE_SITE_KEY
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
 ```
 
-يستخدم التطبيق صفحة `/turnstile-widget.html` التي يقدمها Worker نفسه. لا يعتمد التطبيق على Vercel أو BotID.
+القيم السابقة public configuration وليست service-account secrets. لا تضع service account JSON داخل الواجهة أو APK.
 
 ## إعداد التطبيق
 
