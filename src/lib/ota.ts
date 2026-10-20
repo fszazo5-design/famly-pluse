@@ -3,6 +3,7 @@ import { CapacitorUpdater, type BundleInfo } from '@capgo/capacitor-updater';
 
 const OTA_REPOSITORY = import.meta.env.VITE_OTA_REPOSITORY || 'fszazo5-design/famly-pluse';
 const OTA_API_URL = `https://api.github.com/repos/${OTA_REPOSITORY}/releases/latest`;
+const OTA_DOWNLOAD_PROXY = 'https://famly-pluse-api.fszazo5.workers.dev/api/ota/download';
 
 interface GitHubRelease {
   tag_name: string;
@@ -81,7 +82,10 @@ export async function checkForOtaUpdate(): Promise<OtaUpdateInfo | null> {
     version: release.tag_name,
     title: release.name || release.tag_name,
     releaseUrl: release.html_url,
-    downloadUrl: asset.browser_download_url,
+    // Android's native downloader can reject GitHub's 302 redirect to
+    // release-assets.githubusercontent.com. The Worker follows that redirect
+    // server-side and streams a stable ZIP response to the device.
+    downloadUrl: `${OTA_DOWNLOAD_PROXY}?tag=${encodeURIComponent(release.tag_name)}`,
   };
 }
 

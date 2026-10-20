@@ -1,6 +1,6 @@
 # تحديث واجهة التطبيق عبر OTA
 
-يستخدم التطبيق `@capgo/capacitor-updater` لتحديث ملفات الواجهة فقط من GitHub Releases. عند كل push إلى `main` في ملفات الواجهة، ينفذ Workflow باسم **Frontend OTA Release**، ويبني `dist.zip` وينشره كإصدار يبدأ بـ `ota-`.
+يستخدم التطبيق `@capgo/capacitor-updater` لتحديث ملفات الواجهة فقط من GitHub Releases. عند كل push إلى `main` في ملفات الواجهة، ينفذ Workflow باسم **Frontend OTA Release**، ويبني `dist.zip` وينشره كإصدار يبدأ بـ `ota-`. عند التنزيل، يمر ملف ZIP عبر `/api/ota/download` في Cloudflare Worker حتى لا يتأثر Android بإعادة توجيه GitHub إلى `release-assets.githubusercontent.com`.
 
 عند تشغيل التطبيق على Android، يفحص آخر Release في المستودع `fszazo5-design/famly-pluse`. إذا وُجد `dist.zip` بإصدار جديد، يظهر تنبيه داخل التطبيق. بعد التنزيل يتم تجهيز الحزمة لتعمل عند إعادة فتح التطبيق. إذا فشلت الحزمة في الإقلاع، يعيد native updater تلقائيًا إلى آخر حزمة سليمة.
 
