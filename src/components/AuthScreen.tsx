@@ -31,7 +31,7 @@ export default function AuthScreen() {
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const isNative = Capacitor.isNativePlatform();
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() ?? '';
-  const apiUrl = import.meta.env.VITE_API_URL?.trim() ?? '';
+  const apiUrl = import.meta.env.VITE_API_URL?.trim() || 'https://famlypulse.vercel.app';
   let turnstileOrigin = '';
   try {
     if (apiUrl) turnstileOrigin = new URL(apiUrl).origin;
@@ -49,8 +49,12 @@ export default function AuthScreen() {
       return;
     }
     setPhone(phoneValidation.e164);
-    if (isNative && (!captchaToken || !turnstileSiteKey || !turnstileOrigin)) {
-      setError('أكمل اختبار الأمان وتأكد من إعداد رابط API ومفتاح Turnstile لنسخة التطبيق.');
+    if (isNative && (!turnstileSiteKey || !turnstileOrigin)) {
+      setError('نسخة التطبيق غير مهيأة للتحقق الأمني. أضف VITE_TURNSTILE_SITE_KEY ثم أعد بناء APK.');
+      return;
+    }
+    if (isNative && !captchaToken) {
+      setError('أكمل اختبار الأمان أولًا لإرسال رمز SMS.');
       return;
     }
     setLoading(true);
