@@ -30,6 +30,10 @@ android {
     kotlinOptions {
         jvmTarget = '21'
     }
+    lint {
+        // Android Lint's detector crashes with the current Kotlin analysis API.
+        disable 'NullSafeMutableLiveData'
+    }
     signingConfigs {
         release {
             if (signingPropertiesFile.exists()) {
