@@ -1,5 +1,7 @@
 # ربط Neon + Vercel — دليل الإعداد
 
+> **مسار قديم:** هذا المستند يشرح نشر Vercel/Neon السابق. فرع الترحيل الحالي يستخدم Cloudflare Worker وKV، ومصدره المستقل في [famly-pluse-backend](https://github.com/fszazo5-design/famly-pluse-backend). لا تطبق إعدادات هذا الدليل على Worker؛ اتبع README في مستودع الباك إند.
+
 ## نظرة عامة
 
 يحتوي هذا المشروع على طبقتين للباك-إند:

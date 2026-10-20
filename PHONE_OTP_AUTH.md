@@ -1,5 +1,7 @@
 # Phone OTP + Family Code (Auth0, Vercel BotID, Android Turnstile)
 
+> **مسار سابق:** يصف هذا المستند تكامل Vercel BotID/Neon القديم. فرع الترحيل الحالي يطلب Turnstile من الويب وAndroid ويتحقق منه داخل Cloudflare Worker. راجع [مستودع الباك إند](https://github.com/fszazo5-design/famly-pluse-backend) و`ANDROID_BUILD.md` للإعداد الحالي.
+
 ## Authentication and bot-protection flow
 
 - **Web (`famlypulse.vercel.app`)**: Vercel BotID Basic runs invisibly in the browser. The OTP API calls `checkBotId()` before accessing Neon or asking Auth0 to send an SMS.
