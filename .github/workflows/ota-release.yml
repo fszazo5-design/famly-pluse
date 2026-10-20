@@ -39,6 +39,12 @@ jobs:
         env:
           VITE_HELP_VIDEO_URL: ${{ secrets.VITE_HELP_VIDEO_URL }}
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyDJqCntqnXwuu1Pw8VfmVvyAlg6zieQ-1U' }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'myfamly-6035d.firebaseapp.com' }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'myfamly-6035d' }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET || 'myfamly-6035d.firebasestorage.app' }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || '103503538294' }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID || '1:103503538294:android:82e3eb1ec7121916d01757' }}
           VITE_OTA_REPOSITORY: ${{ github.repository }}
         run: npm run build
 
