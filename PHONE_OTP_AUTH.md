@@ -48,13 +48,11 @@ VITE_TURNSTILE_SITE_KEY
 
 ## إعداد التطبيق
 
-استخدم رابط Worker في بيئة البناء:
+عنوان Worker مثبت داخل الواجهة وWorkflow Android وWorkflow OTA، ولا يعتمد على متغير رابط قابل للتغيير:
 
 ```text
-VITE_API_URL=https://famly-pluse-api.fszazo5.workers.dev
+https://famly-pluse-api.fszazo5.workers.dev
 ```
-
-وهو أيضًا الرابط الافتراضي المضمّن في الواجهة وWorkflow Android وWorkflow OTA.
 
 ## قاعدة البيانات والتخزين
 

@@ -29,10 +29,7 @@ export default function AuthScreen() {
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() ?? '';
-  const configuredApiUrl = import.meta.env.VITE_API_URL?.trim() ?? '';
-  const apiUrl = configuredApiUrl && !/vercel\.app/i.test(configuredApiUrl)
-    ? configuredApiUrl
-    : 'https://famly-pluse-api.fszazo5.workers.dev';
+  const apiUrl = 'https://famly-pluse-api.fszazo5.workers.dev';
   let turnstileOrigin = '';
   try {
     if (apiUrl) turnstileOrigin = new URL(apiUrl).origin;

@@ -11,7 +11,6 @@
 
 أضف هذه القيم إلى **Settings → Secrets and variables → Actions** في مستودع GitHub:
 
-- `VITE_API_URL=https://famly-pluse-api.fszazo5.workers.dev` — رابط Cloudflare Worker.
 - `VITE_TURNSTILE_SITE_KEY` — Site Key عام من Cloudflare، يُضمّن في تطبيق الهاتف؛ ليس سرًا.
 - `VITE_HELP_VIDEO_URL` — اختياري.
 - أسرار توقيع APK/AAB الموجودة في workflow.

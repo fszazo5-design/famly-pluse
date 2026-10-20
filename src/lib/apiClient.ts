@@ -4,8 +4,7 @@
  */
 
 const DEFAULT_API_URL = 'https://famly-pluse-api.fszazo5.workers.dev';
-const configuredApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? '';
-const API_URL = (configuredApiUrl && !/vercel\.app/i.test(configuredApiUrl) ? configuredApiUrl : DEFAULT_API_URL).replace(/\/$/, '');
+const API_URL = DEFAULT_API_URL;
 
 function authHeaders(token?: string): Record<string, string> {
   const storedToken = token ?? (() => {
