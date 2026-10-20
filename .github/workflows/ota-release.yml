@@ -49,12 +49,27 @@ jobs:
           zip -qr ../dist.zip .
           test -s ../dist.zip
 
+      - name: Copy latest production Android artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p ota-assets
+          latest_android_tag=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 50 --json tagName,publishedAt \
+            --jq '[.[] | select(.tagName | startswith("v"))] | sort_by(.publishedAt) | last.tagName')
+          if [ -n "$latest_android_tag" ] && [ "$latest_android_tag" != "null" ]; then
+            gh release download "$latest_android_tag" --repo "$GITHUB_REPOSITORY" \
+              --pattern 'app-release.apk' --pattern 'app-release.aab' --dir ota-assets --clobber
+          fi
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           OTA_TAG: ota-${{ github.run_number }}
         run: |
-          gh release create "$OTA_TAG" dist.zip \
+          release_assets=(dist.zip)
+          [ -f ota-assets/app-release.apk ] && release_assets+=(ota-assets/app-release.apk)
+          [ -f ota-assets/app-release.aab ] && release_assets+=(ota-assets/app-release.aab)
+          gh release create "$OTA_TAG" "${release_assets[@]}" \
             --target "$GITHUB_SHA" \
             --title "Frontend OTA $OTA_TAG" \
-            --notes "Frontend-only OTA bundle from commit $GITHUB_SHA. Native Android changes require a new APK/AAB release."
+            --notes "Frontend OTA bundle from commit $GITHUB_SHA. APK/AAB are copied from the latest production release for convenience; native Android changes still require a new APK/AAB release."
