@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "103503538294",
+    "project_id": "myfamly-6035d",
+    "storage_bucket": "myfamly-6035d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:103503538294:android:82e3eb1ec7121916d01757",
+        "android_client_info": {
+          "package_name": "com.guardian.safety"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "103503538294-hsgu189bob8o2jdadhmar3r6qc20uu7g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.guardian.safety",
+            "certificate_hash": "7e2b6bab9de3cecdb67152dc558880d0d9cda412"
+          }
+        },
+        {
+          "client_id": "103503538294-7gkhhbaj48l7k2k952otql20p8k2sib6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJqCntqnXwuu1Pw8VfmVvyAlg6zieQ-1U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "103503538294-7gkhhbaj48l7k2k952otql20p8k2sib6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

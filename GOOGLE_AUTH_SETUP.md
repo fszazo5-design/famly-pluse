@@ -11,9 +11,9 @@
 
 ## إعداد بناء APK/AAB
 
-في المستودع `fszazo5-design/famly-pluse`، افتح **Settings → Secrets and variables → Actions → New repository secret**، وأنشئ السر بالاسم `GOOGLE_SERVICES_JSON` والصق محتوى ملف JSON كاملًا. لا تضع ملفًا مفقودًا أو عميل OAuth تجريبيًا؛ سير إصدار Android يتحقق من المشروع والحزمة ومعرّفات OAuth ويوقف البناء برسالة واضحة عند غيابها.
+يوجد ملف Firebase المعتمد مباشرة في `android/app/google-services.json` ويستخدمه سير البناء كما هو؛ لا يلزم إنشاء GitHub Actions secret. يتأكد سير إصدار Android من المشروع والحزمة ووجود عميلَي OAuth قبل بناء APK/AAB. إذا تغيّر إعداد Firebase لاحقًا، حدّث هذا الملف فقط، ولا تضع service-account JSON أو مفتاحًا خاصًا في المستودع.
 
-بعد إضافة الإعداد، يلزم إصدار Android جديد لأن تهيئة المكوّن الأصلي لا تنتقل عبر OTA وحده.
+يلزم إصدار Android جديد لأن تهيئة المكوّن الأصلي لا تنتقل عبر OTA وحده.
 
 ## رقم التواصل للطوارئ
 
