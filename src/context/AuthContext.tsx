@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capgo/capacitor-firebase-authentication';
 import type { Profile } from '@/lib/types';
 import {
   clearLocalSession,
@@ -40,6 +42,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    try {
+      if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('FirebaseAuthentication')) {
+        await FirebaseAuthentication.signOut();
+      } else {
+        const [{ signOut: webSignOut }, { firebaseAuth }] = await Promise.all([
+          import('firebase/auth'),
+          import('@/lib/firebase'),
+        ]);
+        await webSignOut(firebaseAuth);
+      }
+    } catch {
+      // Clear the app session even if the identity provider is temporarily unavailable.
+    }
     clearLocalSession();
     setState({ user: null, profile: null, loading: false });
     notifyAuthChanged();

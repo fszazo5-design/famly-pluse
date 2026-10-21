@@ -1,6 +1,6 @@
 /*
- * API client for the Vercel-hosted backend that connects to Neon Postgres.
- * Set VITE_API_URL for native builds; same-origin is used by the web app.
+ * API client for the Cloudflare Worker backend used by the mobile and web app.
+ * The Worker validates sessions and stores family data in its configured KV namespace.
  */
 
 const DEFAULT_API_URL = 'https://famly-pluse-api.fszazo5.workers.dev';
@@ -75,16 +75,10 @@ async function get(path: string, params: Record<string, string> = {}) {
 }
 
 export const api = {
-  requestOtp: (phone: string, captchaToken?: string) =>
-    post('/api/auth/request-otp', { phone, ...(captchaToken ? { captchaToken } : {}) }),
+  exchangeGoogle: (body: { id_token: string; display_name: string }) =>
+    post('/api/auth/google-exchange', body),
 
-  verifyOtp: (body: { phone: string; code: string; display_name: string }) =>
-    post('/api/auth/verify-otp', body),
-
-  exchangeFirebase: (body: { id_token: string; display_name: string }) =>
-    post('/api/auth/firebase-exchange', body),
-
-  completeFamily: (token: string, body: { action: 'create' | 'join'; family_name?: string; family_code?: string; display_name: string }) =>
+  completeFamily: (token: string, body: { action: 'create' | 'join'; family_name?: string; family_code?: string; display_name: string; phone?: string }) =>
     post('/api/family/complete', body, token),
 
   // Family

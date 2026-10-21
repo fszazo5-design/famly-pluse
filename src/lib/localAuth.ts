@@ -2,7 +2,7 @@ import type { Profile } from '@/lib/types';
 
 export interface LocalUser {
   id: string;
-  phone_e164: string;
+  phone_e164: string | null;
   display_name: string;
 }
 

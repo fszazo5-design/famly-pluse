@@ -30,7 +30,7 @@ const config: CapacitorConfig = {
       keepUrlPathAfterReload: true,
     },
     FirebaseAuthentication: {
-      providers: ['phone'],
+      providers: ['google'],
       skipNativeAuth: false,
     },
   },
