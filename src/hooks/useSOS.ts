@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { nativeBridge, type GPSReading } from '@/lib/nativeBridge';
+import { requestLocationPermission } from '@/lib/devicePermissions';
 import type { SOSEvent } from '@/lib/types';
 
 interface SOSState {
   active: boolean;
   event: SOSEvent | null;
   triggering: boolean;
+  error: string | null;
 }
 
 export function useSOS(familyId: string | null, userId: string | null) {
-  const [state, setState] = useState<SOSState>({ active: false, event: null, triggering: false });
+  const [state, setState] = useState<SOSState>({ active: false, event: null, triggering: false, error: null });
   const trackingSessionId = useRef<string | null>(null);
   const gpsUnsub = useRef<(() => void) | null>(null);
 
@@ -31,8 +33,16 @@ export function useSOS(familyId: string | null, userId: string | null) {
   const triggerSOS = useCallback(
     async (triggerType: 'manual' | 'power_button' | 'check_in_timeout' = 'manual', message?: string) => {
       if (!familyId || !userId || state.active) return;
-      setState((s) => ({ ...s, triggering: true }));
+      setState((s) => ({ ...s, triggering: true, error: null }));
       try {
+        const locationGranted = await requestLocationPermission();
+        if (!locationGranted) throw new Error('LOCATION_PERMISSION_REQUIRED');
+
+        // Microphone permission is requested only after the user explicitly starts SOS.
+        // A denied microphone must not prevent the SOS alert and location stream.
+        const permissions = await nativeBridge.requestEmergencyPermissions();
+        if (!permissions.location) throw new Error('LOCATION_PERMISSION_REQUIRED');
+
         await nativeBridge.triggerSOS();
         const { event } = await api.triggerSOS({
           family_id: familyId,
@@ -46,10 +56,18 @@ export function useSOS(familyId: string | null, userId: string | null) {
         gpsUnsub.current = nativeBridge.onGPSReading((reading) => {
           if (trackingSessionId.current) void pushBreadcrumb(reading, trackingSessionId.current, familyId, userId);
         });
-        setState({ active: true, event, triggering: false });
+        setState({
+          active: true,
+          event,
+          triggering: false,
+          error: permissions.microphone ? null : 'تم إرسال SOS وموقعك، لكن تسجيل الصوت غير متاح لأن إذن الميكروفون رُفض.',
+        });
       } catch (err) {
         console.error('SOS trigger failed:', err);
-        setState({ active: false, event: null, triggering: false });
+        const errorMessage = err instanceof Error && err.message === 'LOCATION_PERMISSION_REQUIRED'
+          ? 'اسمح للتطبيق بالوصول إلى الموقع لإرسال SOS مع موقعك. يمكنك تفعيل الموقع من بطاقة أذونات الجهاز أو إعدادات التطبيق.'
+          : 'تعذّر بدء SOS. تحقق من الاتصال والأذونات ثم حاول مرة أخرى.';
+        setState({ active: false, event: null, triggering: false, error: errorMessage });
       }
     },
     [familyId, userId, state.active, pushBreadcrumb],
@@ -63,7 +81,7 @@ export function useSOS(familyId: string | null, userId: string | null) {
     if (trackingSessionId.current) await api.stopTracking(trackingSessionId.current);
     await api.resolveSOS(state.event.id);
     trackingSessionId.current = null;
-    setState({ active: false, event: null, triggering: false });
+    setState({ active: false, event: null, triggering: false, error: null });
   }, [state.event]);
 
   useEffect(() => () => {

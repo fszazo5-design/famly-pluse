@@ -17,7 +17,15 @@ export interface GPSReading {
 
 type Listener = (reading: GPSReading) => void;
 
+export interface EmergencyPermissionStatus {
+  location: boolean;
+  microphone: boolean;
+  notifications: boolean;
+  backgroundLocation: boolean;
+}
+
 interface EmergencyPluginApi {
+  requestEmergencyPermissions: () => Promise<EmergencyPermissionStatus>;
   triggerSOS: () => Promise<{ eventId: string }>;
   cancelSOS: () => Promise<void>;
   startGPSTracking: () => Promise<void>;
@@ -62,6 +70,13 @@ class NativeBridge {
   /** True when running inside the Capacitor Android shell. */
   get isNative(): boolean {
     return this.capacitor?.isNative?.() ?? false;
+  }
+
+  /** Request location and microphone only in the SOS flow, where recording is explained. */
+  async requestEmergencyPermissions(): Promise<EmergencyPermissionStatus> {
+    const plugin = this.plugin;
+    if (plugin) return plugin.requestEmergencyPermissions();
+    return { location: true, microphone: true, notifications: true, backgroundLocation: true };
   }
 
   /**

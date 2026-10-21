@@ -4,23 +4,29 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 import org.json.JSONObject
 import java.util.UUID
 
 /** Capacitor bridge for the native emergency service. */
-@CapacitorPlugin(name = "EmergencyPlugin")
+@CapacitorPlugin(
+    name = "EmergencyPlugin",
+    permissions = [
+        Permission(
+            alias = "location",
+            strings = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION],
+        ),
+        Permission(alias = "microphone", strings = [Manifest.permission.RECORD_AUDIO]),
+    ],
+)
 class EmergencyPlugin : Plugin() {
-    companion object {
-        private const val PERMISSION_REQUEST_CODE = 4101
-    }
-
     override fun load() {
         super.load()
         EmergencyForegroundService.eventListener = { eventName, data ->
@@ -30,17 +36,19 @@ class EmergencyPlugin : Plugin() {
 
     @PluginMethod
     fun requestEmergencyPermissions(call: PluginCall) {
-        val missing = runtimePermissions().filterNot(::hasGrantedPermission)
-        if (missing.isEmpty()) {
+        val missingAliases = mutableListOf<String>()
+        if (!hasLocationPermission()) missingAliases.add("location")
+        if (!hasGrantedPermission(Manifest.permission.RECORD_AUDIO)) missingAliases.add("microphone")
+        if (missingAliases.isEmpty()) {
             call.resolve(permissionResult())
             return
         }
-        val currentActivity = activity ?: run {
-            call.reject("ACTIVITY_UNAVAILABLE")
-            return
-        }
-        ActivityCompat.requestPermissions(currentActivity, missing.toTypedArray(), PERMISSION_REQUEST_CODE)
-        call.resolve(JSObject().put("requested", true).put("missing", missing.joinToString(",")))
+        requestPermissionForAliases(missingAliases.toTypedArray(), call, "emergencyPermissionsCallback")
+    }
+
+    @PermissionCallback
+    private fun emergencyPermissionsCallback(call: PluginCall) {
+        call.resolve(permissionResult())
     }
 
     @PluginMethod
@@ -50,8 +58,8 @@ class EmergencyPlugin : Plugin() {
 
     @PluginMethod
     fun triggerSOS(call: PluginCall) {
-        if (!hasEmergencyPermissions()) {
-            call.reject("PERMISSIONS_REQUIRED", "Grant location, microphone, and notification permissions first")
+        if (!hasLocationPermission()) {
+            call.reject("LOCATION_PERMISSION_REQUIRED", "Grant location permission first")
             return
         }
         val eventId = call.getString("eventId") ?: UUID.randomUUID().toString()
@@ -109,22 +117,6 @@ class EmergencyPlugin : Plugin() {
             context.startService(intent)
         }
     }
-
-    private fun runtimePermissions(): List<String> = buildList {
-        add(Manifest.permission.ACCESS_FINE_LOCATION)
-        add(Manifest.permission.ACCESS_COARSE_LOCATION)
-        add(Manifest.permission.RECORD_AUDIO)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
-        // Android requires background location to be requested after foreground location.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && hasLocationPermission()) {
-            add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        }
-    }
-
-    private fun hasEmergencyPermissions(): Boolean =
-        hasLocationPermission() &&
-            hasGrantedPermission(Manifest.permission.RECORD_AUDIO) &&
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || hasGrantedPermission(Manifest.permission.POST_NOTIFICATIONS))
 
     private fun hasLocationPermission(): Boolean =
         hasGrantedPermission(Manifest.permission.ACCESS_FINE_LOCATION) || hasGrantedPermission(Manifest.permission.ACCESS_COARSE_LOCATION)

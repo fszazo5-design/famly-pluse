@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Navigation, Radio, Loader2, X, Users, Crosshair, Satellite } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { nativeBridge, type GPSReading } from '@/lib/nativeBridge';
+import { requestLocationPermission } from '@/lib/devicePermissions';
 import type { GPSBreadcrumb, Profile, TrackingSession } from '@/lib/types';
 import TrackingMap, { type MapPosition } from '@/components/TrackingMap';
 
@@ -23,6 +24,7 @@ export default function LiveTrackingView({ familyId, userId, onClose, members, s
   const [activeSessions, setActiveSessions] = useState<TrackingSession[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(userId);
   const [showAll, setShowAll] = useState(true);
+  const [permissionMessage, setPermissionMessage] = useState<string | null>(null);
 
   // Load active sessions and recent breadcrumb trails.
   const loadExisting = useCallback(async () => {
@@ -51,6 +53,13 @@ export default function LiveTrackingView({ familyId, userId, onClose, members, s
 
   // Start broadcasting my location
   const startStreaming = useCallback(async () => {
+    setPermissionMessage(null);
+    const locationGranted = await requestLocationPermission();
+    if (!locationGranted) {
+      setPermissionMessage('لم يُمنح إذن الموقع. اسمح به من إعدادات التطبيق ثم أعد المحاولة.');
+      return;
+    }
+
     let sid = activeSessionId;
     if (!sid) {
       const result = await api.startTracking({ family_id: familyId, user_id: userId });
@@ -247,6 +256,7 @@ export default function LiveTrackingView({ familyId, userId, onClose, members, s
 
       {/* Bottom controls */}
       <div className="p-3 border-t border-white/10 bg-slate-900/80 backdrop-blur-xl">
+        {permissionMessage && <p role="alert" className="text-xs text-primary-300 text-center mb-3">{permissionMessage}</p>}
         {!streaming ? (
           <button
             onClick={startStreaming}

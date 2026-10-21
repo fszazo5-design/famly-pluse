@@ -12,6 +12,7 @@ import CheckInTimer from '@/components/CheckInTimer';
 import AudioVaultView from '@/components/AudioVaultView';
 import EmergencyAlertOverlay from '@/components/EmergencyAlertOverlay';
 import HelpCenter from '@/components/HelpCenter';
+import DevicePermissionCard from '@/components/DevicePermissionCard';
 
 type View = 'dashboard' | 'tracking' | 'checkin' | 'audio' | 'help';
 
@@ -143,6 +144,8 @@ export default function Dashboard() {
           </button>
         </div>
 
+        <DevicePermissionCard />
+
         {/* Active emergency events */}
         {activeEvents.length > 0 && (
           <div className="glass-card border-primary-500/30 p-4 mb-5 animate-slide-up">
@@ -184,6 +187,7 @@ export default function Dashboard() {
           <p className="text-xs text-slate-400 mb-4 uppercase tracking-wider">
             {sos.active ? 'الطوارئ نشطة' : 'اضغط مع الاستمرار لإطلاق SOS'}
           </p>
+          {sos.error && <p role="alert" className="text-xs text-primary-300 text-center mb-3">{sos.error}</p>}
           <div className="relative">
             {!sos.active && sosHolding && (
               <div className="absolute inset-0 rounded-full border-4 border-primary-500/30 animate-pulse-ring" />
