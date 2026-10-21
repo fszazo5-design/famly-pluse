@@ -2,12 +2,13 @@ import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater, type BundleInfo } from '@capgo/capacitor-updater';
 
 const OTA_REPOSITORY = import.meta.env.VITE_OTA_REPOSITORY || 'fszazo5-design/famly-pluse';
-const OTA_API_URL = `https://api.github.com/repos/${OTA_REPOSITORY}/releases/latest`;
+const OTA_API_URL = `https://api.github.com/repos/${OTA_REPOSITORY}/releases?per_page=100`;
 
 interface GitHubRelease {
   tag_name: string;
   name: string | null;
   html_url: string;
+  published_at: string;
   assets: Array<{ name: string; browser_download_url: string }>;
 }
 
@@ -61,7 +62,14 @@ export async function checkForOtaUpdate(): Promise<OtaUpdateInfo | null> {
     );
   }
 
-  const release = (await response.json()) as GitHubRelease;
+  const releases = (await response.json()) as GitHubRelease[];
+  const otaReleases = releases
+    .filter((item) => /^ota-\d+$/.test(item.tag_name))
+    .sort((left, right) => Number(right.tag_name.slice(4)) - Number(left.tag_name.slice(4)));
+  const release = otaReleases[0];
+  if (!release) {
+    throw new OtaUpdateError('لا يوجد إصدار تحديث هوائي منشور حاليًا.', 'OTA_RELEASE_MISSING', 'No release tag matching ota-N was found');
+  }
   const asset = release.assets.find((item) => item.name === 'dist.zip');
   if (!release.tag_name) {
     throw new OtaUpdateError('إصدار GitHub لا يحتوي على رقم إصدار صالح.', 'RELEASE_TAG_MISSING', 'release.tag_name is empty');

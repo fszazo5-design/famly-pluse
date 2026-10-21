@@ -29,6 +29,10 @@ const config: CapacitorConfig = {
       autoDeletePrevious: true,
       keepUrlPathAfterReload: true,
     },
+    FirebaseAuthentication: {
+      providers: ['phone'],
+      skipNativeAuth: false,
+    },
   },
   server: {
     androidScheme: 'https',

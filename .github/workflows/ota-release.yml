@@ -21,6 +21,7 @@ permissions:
 jobs:
   publish-ota:
     name: Build and publish frontend OTA bundle
+    if: ${{ !contains(github.event.head_commit.message, '[skip ota]') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -69,8 +70,10 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          OTA_TAG: ota-${{ github.run_number }}
         run: |
+          latest_ota_number=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName \
+            --jq '[.[] | select(.tagName | test("^ota-[0-9]+$")) | (.tagName | sub("^ota-"; "") | tonumber)] | max // 0')
+          OTA_TAG="ota-$((latest_ota_number + 1))"
           release_assets=(dist.zip)
           [ -f ota-assets/app-release.apk ] && release_assets+=(ota-assets/app-release.apk)
           [ -f ota-assets/app-release.aab ] && release_assets+=(ota-assets/app-release.aab)

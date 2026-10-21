@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capgo/capacitor-firebase-authentication';
 import { ArrowRight, Loader2, Phone, Shield, Users, UserPlus } from 'lucide-react';
-import { ConfirmationResult, RecaptchaVerifier, signInWithPhoneNumber, signOut } from 'firebase/auth';
+import type { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
 import { api } from '@/lib/apiClient';
-import { firebaseAuth } from '@/lib/firebase';
 import { savePhoneSession } from '@/lib/localAuth';
 import { normalizePhoneInput, validateInternationalPhone } from '@/lib/phone';
 import type { Profile } from '@/lib/types';
@@ -18,14 +19,18 @@ interface AuthResponse {
 
 function firebaseErrorMessage(error: unknown): string {
   const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
-  if (code.includes('invalid-phone-number')) return 'رقم الهاتف غير صحيح.';
-  if (code.includes('too-many-requests')) return 'تم تجاوز عدد المحاولات. حاول لاحقًا.';
-  if (code.includes('quota-exceeded')) return 'تم تجاوز حصة رسائل SMS في Firebase.';
-  if (code.includes('captcha-check-failed')) return 'فشل التحقق الأمني. أعد المحاولة.';
-  if (code.includes('invalid-verification-code')) return 'رمز التحقق غير صحيح.';
-  if (code.includes('code-expired')) return 'انتهت صلاحية الرمز. اطلب رمزًا جديدًا.';
-  if (error instanceof Error) return error.message;
-  return 'تعذر إكمال التحقق عبر Firebase.';
+  const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
+  const normalized = `${code} ${message}`.toLowerCase();
+
+  if (normalized.includes('invalid-phone-number')) return 'رقم الهاتف غير صحيح.';
+  if (normalized.includes('too-many-requests')) return 'تم تجاوز عدد المحاولات. حاول لاحقًا.';
+  if (normalized.includes('quota-exceeded')) return 'تم تجاوز حصة رسائل SMS في Firebase.';
+  if (normalized.includes('captcha') || normalized.includes('app-verification')) return 'فشل التحقق الأمني للتطبيق. تحقق من إعداد Android في Firebase وحاول مرة أخرى.';
+  if (normalized.includes('invalid-verification-code')) return 'رمز التحقق غير صحيح.';
+  if (normalized.includes('invalid-verification-id') || normalized.includes('code-expired') || normalized.includes('session-expired')) return 'انتهت صلاحية جلسة التحقق. اطلب رمزًا جديدًا.';
+  if (normalized.includes('network-request-failed') || normalized.includes('network')) return 'تعذر الاتصال. تحقق من الإنترنت ثم أعد المحاولة.';
+  if (message && error instanceof Error) return message;
+  return 'تعذر إرسال رمز التحقق أو تأكيده. حاول مرة أخرى.';
 }
 
 export default function AuthScreen() {
@@ -39,19 +44,73 @@ export default function AuthScreen() {
   const [auth, setAuth] = useState<AuthResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nativePhoneVerified, setNativePhoneVerified] = useState(false);
   const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
   const confirmationRef = useRef<ConfirmationResult | null>(null);
+  const nativeVerificationIdRef = useRef<string | null>(null);
+  const nativeListenersRef = useRef<PluginListenerHandle[]>([]);
+  const nativeListenersReadyRef = useRef<Promise<void> | null>(null);
+  const nativeRequestTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nativeAuthAvailable = Capacitor.getPlatform() === 'android' && Capacitor.isPluginAvailable('FirebaseAuthentication');
 
   useEffect(() => () => {
     recaptchaRef.current?.clear();
     recaptchaRef.current = null;
+    if (nativeRequestTimeoutRef.current) clearTimeout(nativeRequestTimeoutRef.current);
+    nativeListenersRef.current.forEach((handle) => { void handle.remove(); });
+    nativeListenersRef.current = [];
   }, []);
 
-  function getRecaptcha(): RecaptchaVerifier {
+  async function getWebRecaptcha(): Promise<RecaptchaVerifier> {
     if (recaptchaRef.current) return recaptchaRef.current;
+    const [{ RecaptchaVerifier }, { firebaseAuth }] = await Promise.all([
+      import('firebase/auth'),
+      import('@/lib/firebase'),
+    ]);
     const verifier = new RecaptchaVerifier(firebaseAuth, 'firebase-recaptcha-container', { size: 'normal' });
     recaptchaRef.current = verifier;
     return verifier;
+  }
+
+  async function ensureNativePhoneListeners(): Promise<void> {
+    if (nativeListenersReadyRef.current) return nativeListenersReadyRef.current;
+
+    const setup = (async () => {
+      const handles = await Promise.all([
+        FirebaseAuthentication.addListener('phoneCodeSent', (event) => {
+          nativeVerificationIdRef.current = event.verificationId;
+          setNativePhoneVerified(false);
+          setOtp('');
+          setError(null);
+          setStep('otp');
+          setLoading(false);
+          if (nativeRequestTimeoutRef.current) clearTimeout(nativeRequestTimeoutRef.current);
+        }),
+        FirebaseAuthentication.addListener('phoneVerificationCompleted', () => {
+          nativeVerificationIdRef.current = null;
+          setNativePhoneVerified(true);
+          setOtp('');
+          setError(null);
+          setStep('otp');
+          setLoading(false);
+          if (nativeRequestTimeoutRef.current) clearTimeout(nativeRequestTimeoutRef.current);
+        }),
+        FirebaseAuthentication.addListener('phoneVerificationFailed', (event) => {
+          if (!nativeVerificationIdRef.current) setError(firebaseErrorMessage(new Error(event.message)));
+          setLoading(false);
+          if (nativeRequestTimeoutRef.current) clearTimeout(nativeRequestTimeoutRef.current);
+        }),
+      ]);
+      nativeListenersRef.current = handles;
+    })();
+
+    nativeListenersReadyRef.current = setup;
+    try {
+      await setup;
+    } catch (error) {
+      nativeListenersReadyRef.current = null;
+      throw error;
+    }
   }
 
   async function requestOtp(event: React.FormEvent) {
@@ -62,37 +121,81 @@ export default function AuthScreen() {
       setError(phoneValidation.error ?? 'رقم الهاتف غير صحيح.');
       return;
     }
+
     setLoading(true);
+    let waitingForNativeCallback = false;
     try {
       setPhone(phoneValidation.e164);
-      confirmationRef.current = await signInWithPhoneNumber(firebaseAuth, phoneValidation.e164, getRecaptcha());
+      setNativePhoneVerified(false);
+      nativeVerificationIdRef.current = null;
+      confirmationRef.current = null;
+
+      if (nativeAuthAvailable) {
+        await ensureNativePhoneListeners();
+        nativeRequestTimeoutRef.current = setTimeout(() => {
+          setLoading(false);
+          setError('لم يصل رد من Firebase. تحقق من اتصال الإنترنت وإعداد تطبيق Android في Firebase، ثم حاول مرة أخرى.');
+        }, 45_000);
+        waitingForNativeCallback = true;
+        await FirebaseAuthentication.signInWithPhoneNumber({ phoneNumber: phoneValidation.e164 });
+        return;
+      }
+
+      const [{ signInWithPhoneNumber }, { firebaseAuth }] = await Promise.all([
+        import('firebase/auth'),
+        import('@/lib/firebase'),
+      ]);
+      confirmationRef.current = await signInWithPhoneNumber(firebaseAuth, phoneValidation.e164, await getWebRecaptcha());
       setStep('otp');
     } catch (err: unknown) {
+      waitingForNativeCallback = false;
+      if (nativeRequestTimeoutRef.current) clearTimeout(nativeRequestTimeoutRef.current);
       recaptchaRef.current?.clear();
       recaptchaRef.current = null;
       setError(firebaseErrorMessage(err));
-    } finally {
       setLoading(false);
+    } finally {
+      if (!waitingForNativeCallback) setLoading(false);
+    }
+  }
+
+  async function exchangeFirebaseToken(idToken: string) {
+    const result = await api.exchangeFirebase({ id_token: idToken, display_name: displayName.trim() }) as AuthResponse;
+    setAuth(result);
+    if (result.profile?.family_id) {
+      savePhoneSession({ token: result.token, user: result.user, profile: result.profile });
+    } else {
+      setStep('family');
     }
   }
 
   async function verifyOtp(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    if (!confirmationRef.current) {
+    if (!nativeAuthAvailable && !confirmationRef.current) {
       setError('اطلب رمزًا جديدًا أولًا.');
       return;
     }
+    if (nativeAuthAvailable && !nativePhoneVerified && !nativeVerificationIdRef.current) {
+      setError('اطلب رمزًا جديدًا أولًا.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const credential = await confirmationRef.current.confirm(otp.trim());
-      const idToken = await credential.user.getIdToken();
-      const result = await api.exchangeFirebase({ id_token: idToken, display_name: displayName.trim() }) as AuthResponse;
-      setAuth(result);
-      if (result.profile?.family_id) {
-        savePhoneSession({ token: result.token, user: result.user, profile: result.profile });
+      if (nativeAuthAvailable) {
+        if (!nativePhoneVerified) {
+          await FirebaseAuthentication.confirmVerificationCode({
+            verificationId: nativeVerificationIdRef.current!,
+            verificationCode: otp.trim(),
+          });
+        }
+        const { token } = await FirebaseAuthentication.getIdToken({ forceRefresh: true });
+        await exchangeFirebaseToken(token);
       } else {
-        setStep('family');
+        const credential = await confirmationRef.current!.confirm(otp.trim());
+        const idToken = await credential.user.getIdToken();
+        await exchangeFirebaseToken(idToken);
       }
     } catch (err: unknown) {
       setError(firebaseErrorMessage(err));
@@ -125,7 +228,20 @@ export default function AuthScreen() {
 
   async function changePhone() {
     confirmationRef.current = null;
-    await signOut(firebaseAuth).catch(() => undefined);
+    nativeVerificationIdRef.current = null;
+    setNativePhoneVerified(false);
+    if (nativeRequestTimeoutRef.current) clearTimeout(nativeRequestTimeoutRef.current);
+    recaptchaRef.current?.clear();
+    recaptchaRef.current = null;
+    if (nativeAuthAvailable) {
+      await FirebaseAuthentication.signOut().catch(() => undefined);
+    } else {
+      const [{ signOut }, { firebaseAuth }] = await Promise.all([
+        import('firebase/auth'),
+        import('@/lib/firebase'),
+      ]);
+      await signOut(firebaseAuth).catch(() => undefined);
+    }
     setStep('phone');
     setOtp('');
     setError(null);
@@ -142,14 +258,14 @@ export default function AuthScreen() {
         <div className="glass-card p-6">
           {step === 'phone' && <form onSubmit={requestOtp} className="space-y-5">
             <div><label className="block text-sm font-medium text-slate-300 mb-2">رقم الهاتف الدولي</label><div className="relative"><Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" /><input required maxLength={20} autoComplete="tel" inputMode="tel" dir="ltr" type="tel" value={phone} onChange={(e) => setPhone(normalizePhoneInput(e.target.value))} className="input-field pr-10 font-mono" placeholder="+9665XXXXXXXX" /></div><p className="text-xs text-slate-500 mt-2">اكتب رمز الدولة والرقم، مثل +966 أو +20.</p></div>
-            <div id="firebase-recaptcha-container" className="flex justify-center" />
+            {!nativeAuthAvailable && <div id="firebase-recaptcha-container" className="flex justify-center" />}
             <button disabled={loading} className="btn-primary w-full py-3.5 flex items-center justify-center gap-2">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Phone className="w-5 h-5" /> إرسال رمز SMS</>}</button>
           </form>}
           {step === 'otp' && <form onSubmit={verifyOtp} className="space-y-5">
             <button type="button" onClick={changePhone} className="text-xs text-slate-400 hover:text-white flex items-center gap-1"><ArrowRight className="w-4 h-4" /> تغيير الرقم</button>
             <div><label className="block text-sm font-medium text-slate-300 mb-2">الاسم المعروض</label><input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="input-field" placeholder="مثال: أحمد" /></div>
-            <div><label className="block text-sm font-medium text-slate-300 mb-2">رمز التحقق</label><input required minLength={4} maxLength={10} inputMode="numeric" dir="ltr" autoFocus value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className="input-field text-center font-mono text-2xl tracking-[0.5em]" placeholder="••••••" /><p className="text-xs text-slate-500 mt-2">أدخل الرمز المرسل إلى {phone}</p></div>
-            <button disabled={loading} className="btn-primary w-full py-3.5 flex items-center justify-center gap-2">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'تأكيد رقم الهاتف'}</button>
+            {nativeAuthAvailable && nativePhoneVerified ? <p className="text-sm text-emerald-300">تم تأكيد رقم الهاتف تلقائيًا.</p> : <div><label className="block text-sm font-medium text-slate-300 mb-2">رمز التحقق</label><input required minLength={4} maxLength={10} inputMode="numeric" dir="ltr" autoFocus value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className="input-field text-center font-mono text-2xl tracking-[0.5em]" placeholder="••••••" /><p className="text-xs text-slate-500 mt-2">أدخل الرمز المرسل إلى {phone}</p></div>}
+            <button disabled={loading} className="btn-primary w-full py-3.5 flex items-center justify-center gap-2">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : nativeAuthAvailable && nativePhoneVerified ? 'إكمال تسجيل الدخول' : 'تأكيد رقم الهاتف'}</button>
           </form>}
           {step === 'family' && <form onSubmit={completeFamily} className="space-y-5">
             <div className="text-center"><Users className="w-10 h-10 text-secondary-400 mx-auto mb-2" /><h2 className="text-lg font-bold text-white">اربط عائلتك</h2><p className="text-sm text-slate-400">أنشئ عائلة جديدة أو استخدم رمزًا للانضمام.</p></div>
